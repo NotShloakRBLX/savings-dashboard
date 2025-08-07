@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chase Savings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; font-family: "Segoe UI", Roboto, sans-serif; color: #333; }
+
+    /* — Fade & Visibility Utilities — */
+    .fade { transition: opacity 0.4s ease; }
+    .hidden { opacity: 0; pointer-events: none; }
+    .visible { opacity: 1; pointer-events: auto; }
+
+    /* ===== Page Container & Transition ===== */
+    .page {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #fff;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.4s ease;
+      overflow-y: auto;
+    }
+    .page.active {
+      opacity: 1; visibility: visible;
+    }
+
+    /* ===== Hero Header ===== */
+    .header {
+      position: relative;
+      background: linear-gradient(135deg, #2C3E50 0%, #4CA1AF 100%);
+      padding: 80px 20px 100px;
+      text-align: center; color: #fff;
+    }
+    .header-label {
+      position: absolute; top: 20px; left: 20px;
+      font-size: 0.9rem; opacity: 0.8;
+    }
+    .main-title {
+      font-size: 3rem; font-weight: 500; color: #1A73E8;
+      margin-bottom: 10px;
+    }
+
+    /* ===== Account Header ===== */
+    .account-header {
+      padding: 20px; border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+    .account-header h2 {
+      font-size: 1.6rem; font-weight: 400; color: #222;
+      text-align: center;
+    }
+
+    /* ===== Main Content ===== */
+    .content {
+      max-width: 600px; margin: 20px auto 40px; padding: 0 20px;
+    }
+    .balance {
+      font-size: 2.2rem; font-weight: 600; margin-bottom: 4px;
+    }
+    .label {
+      font-size: 0.9rem; color: #777; margin-bottom: 20px;
+      display: block;
+    }
+
+    /* ===== Details Box ===== */
+    .details-box {
+      border: 1px solid #ddd; border-radius: 6px;
+      background: #fafafa; padding: 20px; margin-bottom: 30px;
+    }
+    .details-box p {
+      margin-bottom: 12px; line-height: 1.5;
+    }
+    .details-box p:last-child { margin-bottom: 0; }
+
+    /* ===== Recent Transactions Button ===== */
+    .btn-recent {
+      display: block; width: 100%;
+      font-size: 1.1rem; font-weight: 500;
+      padding: 14px 20px; border: none; border-radius: 8px;
+      background: linear-gradient(90deg, #0c2a4e, #123b61);
+      color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      cursor: pointer; transition: background 0.2s, box-shadow 0.2s;
+      margin-bottom: 20px;
+    }
+    .btn-recent:hover {
+      background: linear-gradient(90deg, #0a2340, #0f2f4d);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+
+    /* ===== Overlay (fade only) ===== */
+    .overlay {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .overlay.visible {
+      opacity: 1; pointer-events: auto;
+    }
+
+    /* ===== Modal (fade only) ===== */
+    .modal {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff; border-radius: 8px;
+      width: 340px; max-width: 90%;
+      padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal.visible {
+      opacity: 1; pointer-events: auto;
+    }
+    .modal .close-btn {
+      position: absolute; top: 8px; right: 8px;
+      font-size: 1.2rem; background: none; border: none;
+      cursor: pointer;
+    }
+
+    /* ===== Transactions List ===== */
+    .transactions-list {
+      list-style: none; margin-top: 16px; padding: 0;
+      max-height: 300px; overflow-y: auto;
+    }
+    .transactions-list li {
+      margin-bottom: 12px; line-height: 1.4;
+    }
+    .transactions-list li strong {
+      display: block; margin-bottom: 4px;
+    }
+    .transactions-list li .credit { color: #1e8e3e; font-weight: bold; }
+    .transactions-list li .debit  { color: #d93025; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="login-screen" class="fade visible" style="
+      position:absolute; top:0; left:0; width:100%; height:100%;
+      display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,#2C3E50 0%,#4CA1AF 100%);">
+    <div style="
+        background:rgba(255,255,255,0.1); padding:40px; border-radius:12px;
+        width:90%; max-width:360px; text-align:center;
+        box-shadow:0 8px 24px rgba(0,0,0,0.3); color:#fff;">
+      <h2 style="margin-bottom:24px; font-weight:300; font-size:1.8rem;">
+        Login
+      </h2>
+      <div id="login-error" style="
+          height:1.2em; margin-bottom:12px; color:#ff5e5e;
+          opacity:0; transition:opacity 0.3s; font-size:0.9rem;">
+        Invalid credentials
+      </div>
+      <div style="position:relative; margin-bottom:20px;">
+        <!-- user icon SVG -->
+        <svg viewBox="0 0 24 24" style="
+            position:absolute; top:50%; left:12px; transform:translateY(-50%);
+            width:20px; height:20px; fill:rgba(255,255,255,0.8);">
+          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5
+                   2.3-5 5 2.3 5 5 5zm0 2c-3.3 
+                   0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
+        </svg>
+        <input id="username" type="text" placeholder="Username" style="
+            width:100%; padding:12px 12px 12px 44px; border:none;
+            border-radius:6px; background:rgba(255,255,255,0.2);
+            color:#fff; font-size:1rem;" />
+      </div>
+      <div style="position:relative; margin-bottom:20px;">
+        <!-- lock icon SVG -->
+        <svg viewBox="0 0 24 24" style="
+            position:absolute; top:50%; left:12px; transform:translateY(-50%);
+            width:20px; height:20px; fill:rgba(255,255,255,0.8);">
+          <path d="M17 8V6c0-2.8-2.2-5-5-5S7
+                   3.2 7 6v2H5v14h14V8h-2zm-8
+                   0V6c0-1.7 1.3-3 3-3s3 1.3
+                   3 3v2H9z"/>
+        </svg>
+        <input id="password" type="password" placeholder="Password" style="
+            width:100%; padding:12px 12px 12px 44px; border:none;
+            border-radius:6px; background:rgba(255,255,255,0.2);
+            color:#fff; font-size:1rem;" />
+      </div>
+      <button id="login-btn" style="
+          width:100%; padding:12px; background:#1e8e3e; border:none;
+          border-radius:6px; color:#fff; font-size:1.1rem;
+          font-weight:500; cursor:pointer; transition:background 0.2s;">
+        Log In
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD WRAPPER ===== -->
+  <div id="dashboard" class="fade hidden">
+
+    <!-- ===== SAVINGS PAGE ===== -->
+    <div id="savings" class="page active">
+      <div class="header">
+        <div class="header-label">Chase Savings</div>
+        <div class="main-title">Chase Savings</div>
+      </div>
+
+      <div class="account-header">
+        <h2>CHASE SAVINGS (...9124)</h2>
+      </div>
+
+      <div class="content">
+        <div class="balance">$741.36</div>
+        <div class="label">Available balance</div>
+
+        <div class="details-box">
+          <p><strong>Available balance:</strong> $741.36</p>
+          <p><strong>Annual Percentage Yield (APY):</strong> 184.00%</p>
+          <p><strong>Account number:</strong> 102979124</p>
+          <p><strong>Routing number:</strong> 072000326</p>
+          <p><strong>Total interest earned:</strong> $66.67</p>
+          <p><strong>Next tax statement date:</strong> 08/13/2025</p>
+          <p><strong>Next interest date:</strong> 08/09/2025</p>
+        </div>
+
+        <button id="show-trans" class="btn-recent">Recent transactions</button>
+      </div>
+    </div>
+
+  </div>
+  <!-- /#dashboard -->
+
+  <!-- ===== OVERLAY ===== -->
+  <div id="overlay" class="overlay"></div>
+
+  <!-- ===== TRANSACTIONS MODAL ===== -->
+  <div id="modal" class="modal">
+    <button id="close-trans" class="close-btn">×</button>
+    <h3>Recent transactions</h3>
+    <ul class="transactions-list">
+      <li>
+        <strong>Pending (0)</strong>
+        No pending transactions
+      </li>
+      <li>
+        <strong>Aug 05, 2025 (2)</strong>
+        Online Transfer to CHECKING ****2431 – <span class="debit">-$350.00</span><br>
+        ACH credit from TOTAL CHECKING (...6750) – <span class="credit">+$650.00</span>
+      </li>
+      <li>
+        <strong>Aug 04, 2025 (1)</strong>
+        Online Transfer from CREDIT ACCEPTANCE – <span class="credit">+$350.00</span>
+      </li>
+      <li>
+        <strong>Aug 02, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$3.12</span>
+      </li>
+      <li>
+        <strong>Jul 27, 2025 (2)</strong>
+        AFFIRM.COM PAYMENTS – <span class="debit">-$331.00</span><br>
+        Interest earned – <span class="credit">+$14.33</span>
+      </li>
+      <li>
+        <strong>Jul 21, 2025 (1)</strong>
+        ACH credit from TOTAL CHECKING (...6750) – <span class="credit">+$27.11</span>
+      </li>
+      <li>
+        <strong>Jul 20, 2025 (1)</strong>
+        ACH debit to TOTAL CHECKING (...6750) – <span class="debit">-$27.11</span>
+      </li>
+      <li>
+        <strong>Jul 19, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$13.84</span>
+      </li>
+      <li>
+        <strong>Jul 18, 2025 (1)</strong>
+        Amazon.com – <span class="debit">-$269.57</span>
+      </li>
+      <li>
+        <strong>Jul 17, 2025 (2)</strong>
+        CHSE PAYOVERTIME QMZU-AMXQ – <span class="debit">-$190.00</span><br>
+        ACH credit from TOTAL CHECKING (...6750) – <span class="credit">+$850.00</span>
+      </li>
+      <li>
+        <strong>Jul 12, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$0.02</span>
+      </li>
+      <li>
+        <strong>Jul 05, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$0.02</span>
+      </li>
+      <li>
+        <strong>Jun 28, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$0.05</span>
+      </li>
+      <li>
+        <strong>Jun 11, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$0.02</span>
+      </li>
+      <li>
+        <strong>Jun 13, 2025 (1)</strong>
+        CHASE TRVL (LCA-HND) – <span class="debit">-$8,901.66</span> – TRAVEL – <span class="debit">-$89.01</span><br>
+        Deposit – <span class="credit">+$8.00</span>
+      </li>
+      <li>
+        <strong>Jun 12, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$2.91</span>
+      </li>
+      <li>
+        <strong>Jun 10, 2025 (1)</strong>
+        PTFS Reservations – <span class="debit">-$14.90</span>
+      </li>
+      <li>
+        <strong>Jun 08, 2025 (1)</strong>
+        CARD PAYMENT* 8126 – <span class="debit">-$40.00</span><br>
+        CARD PAYMENT* 7295 – <span class="debit">-$40.00</span>
+      </li>
+      <li>
+        <strong>Jun 04, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$6.01</span>
+      </li>
+      <li>
+        <strong>May 28, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$5.81</span>
+      </li>
+      <li>
+        <strong>May 21, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$5.61</span>
+      </li>
+      <li>
+        <strong>May 14, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$4.56</span>
+      </li>
+      <li>
+        <strong>May 07, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$5.27</span>
+      </li>
+      <li>
+        <strong>Apr 30, 2025 (1)</strong>
+        Interest earned – <span class="credit">+$5.10</span>
+      </li>
+      <li>
+        <strong>Apr 23, 2025 (1)</strong>
+        Deposit – <span class="credit">+$144.08</span>
+      </li>
+    </ul>
+  </div>
+
+  <script>
+    // ===== TRANSACTIONS MODAL LOGIC =====
+    const overlay = document.getElementById('overlay'),
+          modal   = document.getElementById('modal');
+    document.getElementById('show-trans').addEventListener('click', () => {
+      overlay.classList.add('visible');
+      modal.classList.add('visible');
+    });
+    document.getElementById('close-trans').addEventListener('click', () => {
+      modal.classList.remove('visible');
+      overlay.classList.remove('visible');
+    });
+
+    // ===== LOGIN SCREEN LOGIC =====
+    const loginScreen = document.getElementById('login-screen'),
+          dashboard   = document.getElementById('dashboard'),
+          errMsg      = document.getElementById('login-error'),
+          btn         = document.getElementById('login-btn');
+
+    btn.addEventListener('click', () => {
+      const u = document.getElementById('username').value.trim(),
+            p = document.getElementById('password').value;
+      if (u === 'shloak' && p === 'Sac') {
+        // fade out login
+        loginScreen.classList.remove('visible');
+        loginScreen.classList.add('hidden');
+        // fade in dashboard
+        setTimeout(() => {
+          dashboard.classList.remove('hidden');
+          dashboard.classList.add('visible');
+        }, 400);
+      } else {
+        errMsg.style.opacity = '1';
+        setTimeout(() => errMsg.style.opacity = '0', 2000);
+      }
+    });
+    // allow Enter key to submit
+    ['username','password'].forEach(id => {
+      document.getElementById(id)
+        .addEventListener('keydown', e => {
+          if (e.key === 'Enter') btn.click();
+        });
+    });
+  </script>
+</body>
+</html>
